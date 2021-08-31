@@ -1,0 +1,11 @@
+{
+    "jupyter.jupyterServerType": "local",
+    "files.exclude": {
+        "**/.neptune*": true,
+        "**/__pycache__*": true,
+        "**/*.pyc":true
+    },
+    //"python.pythonPath": "C:\Users\vcall\.conda\envs\flood\python.exe",
+    "python.pythonPath": "/home/victor/miniconda3/envs/flood/bon/python",
+    "git.ignoreLimitWarning": true
+}
