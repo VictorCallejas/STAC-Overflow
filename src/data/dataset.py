@@ -178,7 +178,8 @@ class IterChip(Dataset):
 
         transformed = self.aug_to_tensor(image=x, mask=y)
         x, y =  transformed['image'], transformed['mask']
-        
+        return x, y
+        '''
         return {
             #'id':self.chip_ids[index],
             #'idx':index,
@@ -186,6 +187,7 @@ class IterChip(Dataset):
             #'mask':mask,
             'label':y
         }
+        '''
 
     def converge_aug_inference(self, preds):
         

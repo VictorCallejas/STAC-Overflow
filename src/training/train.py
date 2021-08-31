@@ -4,7 +4,7 @@ import torch
 
 from utils.losses import *
 
-from training.utils import train_epoch, valid_epoch
+from training.utils import train_epoch, valid_epoch, save_ckpt
 
 from tqdm import tqdm 
 
@@ -24,15 +24,20 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
             drop_rate=0., attn_drop_rate=0., drop_path_rate=0.0,
             norm_layer=nn.LayerNorm, ape=True, patch_norm=True,
             use_checkpoint=False, final_upsample="expand_first")
-    
+    '''
     model = getattr(smp,cfg.model_name)(
         encoder_name=cfg.encoder_name,       
         encoder_weights="imagenet", 
+        encoder_depth=3,
+        decoder_channels=(64, 32, 16),
+        activation=None,
+        decoder_attention_type=None,
+        decoder_use_batchnorm=True,
         in_channels=len(cfg.channels),                  
         classes=1,
     )
-    '''
-    model = CTM(cfg)    
+    
+    #model = CTM(cfg)    
     print(model)
     model = model.to(device)
 
@@ -56,27 +61,47 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     path = cfg.save_path + cfg.save_name
 
-    for epoch in tqdm(range(0, cfg.epochs), total = cfg.epochs,desc='EPOCH',leave=False):
+    swa_model = torch.optim.swa_utils.AveragedModel(model)
+
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10,20,40,60,80], gamma=0.5)
+    swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="linear", anneal_epochs=cfg.swa_epochs, swa_lr=cfg.swa_lr)
+
+    for epoch in tqdm(range(0, cfg.epochs + cfg.swa_epochs), total = cfg.epochs + cfg.swa_epochs,desc='EPOCH',leave=False):
         t_loss, t_jac = train_epoch(model, train_dataloader, optimizer, device, criterion, run, scaler, steps_to_accumulate, fp16)
+        run["train/loss"].log(t_loss)
+        run["train/jaccard"].log(t_jac)
+
         v_loss, v_jac = valid_epoch(model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
+        run["dev/loss"].log(v_loss)
+        run["dev/jaccard"].log(v_jac)
 
-        torch.save({
-            'model':model.state_dict(),
-            'model_name':cfg.model_name,
-            'encoder_name':cfg.encoder_name,
-            'optimizer':optimizer.state_dict(),
-            'data':{
-                'channels':train_dataloader.dataset.channels,
-                'norm':{
-                    'mean':train_dataloader.dataset.t_mean,
-                    'std':train_dataloader.dataset.t_std
-                }
-            }
-        },
-        path
-        )
+        print('TRAIN: ',t_loss, t_jac, 'VAL: ',v_loss, v_jac)
+
+        for param_group in optimizer.param_groups:
+            run["lr"].log(param_group['lr'])
+
+        if epoch >= cfg.epochs:
+            swa_model.update_parameters(model)
+            swa_scheduler.step()
+
+            torch.optim.swa_utils.update_bn(train_dataloader, swa_model, device=device)
+            v_loss, v_jac = valid_epoch(swa_model, train_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
+            run["swa/train/loss"].log(t_loss)
+            run["swa/train/jaccard"].log(t_jac)
+
+            #torch.optim.swa_utils.update_bn(val_dataloader, swa_model, device=device)
+            v_loss, v_jac = valid_epoch(swa_model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
+            run["swa/dev/loss"].log(v_loss)
+            run["swa/dev/jaccard"].log(v_jac)
+
+            print('SWA TRAIN: ',t_loss, t_jac, 'SWA VAL: ',v_loss, v_jac)
+
+            save_ckpt(swa_model, optimizer, train_dataloader, cfg, path)
+        else:
+            scheduler.step()
+
         #run['model_pt'].upload(path)
-
+        '''
         study_metric = (v_jac + t_jac) / 2
         if trial != None:
 
@@ -89,3 +114,5 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     run.stop()
     return study_metric
+    '''
+    return

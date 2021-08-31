@@ -1,6 +1,5 @@
 
 artifacts/ 
-.vscode
 **/.neptune/**
 **.pt**
 
