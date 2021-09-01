@@ -12,7 +12,11 @@ import optuna
 import neptune.new as neptune 
 
 from models.swin_unet import SwinTransformerSys
-from models.models import CTM
+from models.models import ResNet
+
+import torchvision
+
+
 
 def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
@@ -24,7 +28,7 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
             drop_rate=0., attn_drop_rate=0., drop_path_rate=0.0,
             norm_layer=nn.LayerNorm, ape=True, patch_norm=True,
             use_checkpoint=False, final_upsample="expand_first")
-    '''
+    
     model = getattr(smp,cfg.model_name)(
         encoder_name=cfg.encoder_name,       
         encoder_weights="imagenet", 
@@ -36,8 +40,10 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
         in_channels=len(cfg.channels),                  
         classes=1,
     )
+    '''
     
-    #model = CTM(cfg)    
+    model = ResNet()
+    #model = JA()
     print(model)
     model = model.to(device)
 
@@ -63,7 +69,7 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     swa_model = torch.optim.swa_utils.AveragedModel(model)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10,20,40,60,80], gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[], gamma=0.1)
     swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="linear", anneal_epochs=cfg.swa_epochs, swa_lr=cfg.swa_lr)
 
     for epoch in tqdm(range(0, cfg.epochs + cfg.swa_epochs), total = cfg.epochs + cfg.swa_epochs,desc='EPOCH',leave=False):
@@ -85,12 +91,12 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
             swa_scheduler.step()
 
             torch.optim.swa_utils.update_bn(train_dataloader, swa_model, device=device)
-            v_loss, v_jac = valid_epoch(swa_model, train_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
+            v_loss, v_jac = valid_epoch(swa_model, train_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed,swa='swa/')
             run["swa/train/loss"].log(t_loss)
             run["swa/train/jaccard"].log(t_jac)
 
             #torch.optim.swa_utils.update_bn(val_dataloader, swa_model, device=device)
-            v_loss, v_jac = valid_epoch(swa_model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
+            v_loss, v_jac = valid_epoch(swa_model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed,swa='swa/')
             run["swa/dev/loss"].log(v_loss)
             run["swa/dev/jaccard"].log(v_jac)
 

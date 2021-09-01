@@ -46,7 +46,7 @@ class IterChip(Dataset):
 
         self.TEST_AUGMENTATIONS = TEST_AUGMENTATIONS
 
-        self.aug_to_tensor = aug = A.Compose([
+        self.aug_to_tensor = A.Compose([
                     ToTensorV2()
                 ])
         
@@ -129,15 +129,16 @@ class IterChip(Dataset):
         self.y = np.array(self.y,dtype=MEM_DTYPE)
 
         print('calculating norms - mean and std')
-        self.t_mean = masked_mean(self.x,self.mask, self.num_channels)
-        self.t_std = masked_std(self.x,self.mask, self.num_channels)
-
+        #self.t_mean = masked_mean(self.x,self.mask, self.num_channels)
+        #self.t_std = masked_std(self.x,self.mask, self.num_channels)
+        '''
         print('NORMALIZE: ', self.t_mean, self.t_std)
         print('normalizing...')
+        
         for dim, _p in enumerate(zip(self.t_mean, self.t_std)):
             _mean, _std = _p
             self.x[:,dim] = (self.x[:,dim] - _mean) / _std
-
+        '''
         print('DATASET CREATED', self.x.shape)
 
 

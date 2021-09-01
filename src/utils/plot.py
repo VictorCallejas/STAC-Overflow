@@ -64,7 +64,7 @@ def display_chip(chip_id,metadata):
     plt.close()
 
 def display_preds(x_,pred_,true_,num=5):
-
+    '''
     mean = x_.t_mean
     std = x_.t_std
 
@@ -74,12 +74,13 @@ def display_preds(x_,pred_,true_,num=5):
                 std= [1/s for s in std]
             )
         ])
-
+    '''
     f, ax = plt.subplots(num, 3, figsize=(9, 9))
 
     for i in range(0,num):
 
-        x = invTrans(x_.__getitem__(i)['x'])
+        #x = invTrans(x_.__getitem__(i)[0])
+        x = x_.__getitem__(i)[0]
         pred = pred_[i]
         true = true_[i]
 

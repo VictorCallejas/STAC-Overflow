@@ -7,12 +7,12 @@ fast_run = False
 data_path = '../data/raw/'
 
 #channels = ['vv','vh','abs', 'mask', 'change', 'extent','seasonality','occurrence','recurrence','transitions','nasadem']
-channels = ['vv','vh']
+channels = ['vv','vh', 'change', 'extent','seasonality','occurrence','recurrence','transitions','nasadem']
 
 val_size = 0.33
 
-batch_size = 24
-num_workers = 4
+batch_size = 6
+num_workers = 0
 
 # MODEL
 save_path = '../artifacts/'
@@ -28,16 +28,16 @@ fp16 = False
 
 optimizer = 'AdamW'
 
-lr = 2e-4
-swa_lr = 5e-2
+lr = 5e-5
+swa_lr = 5e-5
 steps_to_accumulate = 1
 
-epochs = 80
-swa_epochs = 5
+epochs = 300
+swa_epochs = 7
 
 train_watershed = False#
 val_watershed = False
 
 train_plot = False#
-val_plot = False
+val_plot = True
 

@@ -9,7 +9,7 @@ from utils.losses import jaccard_coeff
 from tqdm import tqdm
 
 
-def train_epoch(model, dataloader, optimizer, device, criterion, run, scaler, steps_to_accumulate = 1, fp16 = False):
+def train_epoch(model, dataloader, optimizer, device, criterion, run, scaler, steps_to_accumulate = 1, fp16 = False,swa=''):
 
     model.train()
     optimizer.zero_grad(set_to_none=True)
@@ -27,7 +27,7 @@ def train_epoch(model, dataloader, optimizer, device, criterion, run, scaler, st
             loss = criterion(b_preds, targets)
         scaler.scale(loss).backward()
 
-        #run["train/batch_loss"].log(loss.item())
+        run[swa+"train/batch_loss"].log(loss.item())
 
         if (step + 1) % steps_to_accumulate == 0:
             scaler.unscale_(optimizer)
@@ -47,7 +47,7 @@ def train_epoch(model, dataloader, optimizer, device, criterion, run, scaler, st
 
 
 
-def valid_epoch(model, dataloader, device, criterion, run, scaler, fp16 = False, plot = True, watershed = False):
+def valid_epoch(model, dataloader, device, criterion, run, scaler, fp16 = False, plot = True, watershed = False,swa=''):
 
     model.eval()
 
@@ -66,7 +66,7 @@ def valid_epoch(model, dataloader, device, criterion, run, scaler, fp16 = False,
         
                 scaler.scale(loss)
                 
-                #run["dev/batch_loss"].log(loss.item())
+                run[swa+"dev/batch_loss"].log(loss.item())
 
                 preds = torch.cat([preds, b_preds.detach().cpu()], dim = 0)
                 labels = torch.cat([labels, targets.detach().cpu()], dim = 0)
