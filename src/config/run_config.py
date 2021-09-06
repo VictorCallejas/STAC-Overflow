@@ -11,8 +11,8 @@ channels = ['vv','vh', 'change', 'extent','seasonality','occurrence','recurrence
 
 val_size = 0.33
 
-batch_size = 6
-num_workers = 0
+batch_size = 8
+num_workers = 3
 
 # MODEL
 save_path = '../artifacts/'
@@ -26,13 +26,13 @@ encoder_name = 'resnet18'
 device = 'cuda'
 fp16 = False
 
-optimizer = 'AdamW'
+optimizer = 'SGD'
 
-lr = 5e-5
-swa_lr = 5e-5
+lr = 5e-1
+swa_lr = 5e-2
 steps_to_accumulate = 1
 
-epochs = 300
+epochs = 500
 swa_epochs = 7
 
 train_watershed = False#

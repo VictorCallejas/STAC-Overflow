@@ -12,7 +12,7 @@ import optuna
 import neptune.new as neptune 
 
 from models.swin_unet import SwinTransformerSys
-from models.models import ResNet
+from models.models import Net
 
 import torchvision
 
@@ -42,7 +42,7 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
     )
     '''
     
-    model = ResNet()
+    model = Net(cfg)
     #model = JA()
     print(model)
     model = model.to(device)
@@ -69,7 +69,7 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     swa_model = torch.optim.swa_utils.AveragedModel(model)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20], gamma=0.1)
     swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="linear", anneal_epochs=cfg.swa_epochs, swa_lr=cfg.swa_lr)
 
     for epoch in tqdm(range(0, cfg.epochs + cfg.swa_epochs), total = cfg.epochs + cfg.swa_epochs,desc='EPOCH',leave=False):
