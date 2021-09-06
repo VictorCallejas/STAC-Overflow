@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 import numpy as np 
 
-
+from pysheds.grid import Grid
 
 FEATURES_PATH = '/train_features/'
 EXT = '.tif'
@@ -79,6 +79,30 @@ class IterChip(Dataset):
                     vh = np.expand_dims(img.read(1),axis=0)
                 x = np.concatenate([x, vh], axis=0)
 
+
+            # NASADEM 12 dims
+            if 'nasadem' in self.channels:
+                path = self.DATA_PATH + '/nasadem/' + id_ + EXT
+                with rasterio.open(path) as img:
+                    nasadem = np.expand_dims(img.read(1),axis=0)
+                x = np.concatenate([x, nasadem], axis=0)
+
+                grid = Grid.from_raster(path, data_name='dem')
+                
+                # Resolve flats
+                grid.resolve_flats('dem', out_name='inflated_dem')
+                x = np.concatenate([x,np.expand_dims(grid.inflated_dem,axis=0)], axis=0)
+
+                # Flow direction on hot encoded
+                dirmap = (1, 2, 3, 4, 5, 6, 7, 8)
+                grid.flowdir(data='inflated_dem', out_name='dir', dirmap=dirmap)
+                one_hot = np.transpose(np.eye(9)[grid.dir],(2,0,1))
+                x = np.concatenate([x,one_hot], axis=0)
+                
+                # Accumulation
+                grid.accumulation(data='dir', dirmap=dirmap, out_name='acc')
+                x = np.concatenate([x,np.expand_dims(grid.acc,axis=0)], axis=0)
+            
             # ABS
             if 'abs' in self.channels:
                 if vv == None:
@@ -91,13 +115,6 @@ class IterChip(Dataset):
                         vh = np.expand_dims(img.read(1),axis=0)
                 va = np.abs(vv - vh)
                 x = np.concatenate([x, va], axis=0)
-
-            # NASADEM
-            if 'nasadem' in self.channels:
-                path = self.DATA_PATH + '/nasadem/' + id_ + EXT
-                with rasterio.open(path) as img:
-                    nasadem = np.expand_dims(img.read(1),axis=0)
-                x = np.concatenate([x, nasadem], axis=0)
 
             # CHANGE
             p_channels = ['change', 'extent','seasonality','occurrence','recurrence','transitions']
