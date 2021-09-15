@@ -12,7 +12,7 @@ def get_dataloaders(cfg):
     metadata = pd.read_csv( cfg.data_path + 'metadata.csv', parse_dates=["scene_start"])
 
     if cfg.fast_run:
-        train, val = train_test_split(metadata.chip_id[:20], test_size=cfg.val_size, random_state=cfg.SEED)
+        train, val = train_test_split(metadata.chip_id[:40], test_size=cfg.val_size, random_state=cfg.SEED)
     else:
         train, val = train_test_split(metadata.chip_id, test_size=cfg.val_size, random_state=cfg.SEED)
 

@@ -89,8 +89,8 @@ class Net(nn.Module):
         #norm_layer = nn.BatchNorm2d
         #self._norm_layer = norm_layer
 
-        self.in_c = cfg.channels
-        self.inter_c = 9
+        self.in_c = len(cfg.channels)
+        self.inter_c = self.in_c 
         
         #self.sp = nn.Dropout2d(p=0.2, inplace=False)
         #self.ln = nn.LayerNorm((512,512))
@@ -119,7 +119,19 @@ class Net(nn.Module):
             for m in self.modules():
                 if isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0) 
-        ''' 
+        
+        self.ant = getattr(smp,'Unet')(
+            encoder_name='resnet18',       
+            encoder_weights="imagenet", 
+            encoder_depth=3,
+            decoder_channels=(64, 32, 16),
+            activation=None,
+            decoder_attention_type=None,
+            decoder_use_batchnorm=True,
+            in_channels=2,                  
+            classes=1,
+        )
+
         self.layer_freq = getattr(smp,'Unet')(
             encoder_name='resnet18',       
             encoder_weights="imagenet", 
@@ -143,17 +155,18 @@ class Net(nn.Module):
             in_channels=1,                  
             classes=2,
         )
+        ''' 
 
-        self.inter_model = getattr(smp,'Unet')(
-            encoder_name='resnet34',       
-            encoder_weights="imagenet", 
-            encoder_depth=5,
-            decoder_channels=(256,128,64, 32, 16),
-            activation=None,
-            decoder_attention_type=None,
-            decoder_use_batchnorm=True,
-            in_channels=6,                  
+        self.inter_model = getattr(smp,'UnetPlusPlus')(
+            encoder_name='resnet18',     
+            #encoder_weights=None,
+            #encoder_depth=3,
+            #decoder_channels=(256, 128, 64),
+            in_channels=2,                 
             classes=1,
+            #upsampling=1,
+            #decoder_pyramid_channels=512, 
+            #decoder_segmentation_channels=256,
         )
 
     def _make_layer(self, block, in_c, blocks):
@@ -167,8 +180,9 @@ class Net(nn.Module):
 
     def _forward_impl(self, x):
         
-        identity = x
+        #identity = x
 
+        '''
         x_vvh = x[:,:2].clone()
         x_freq = x[:,2:-1].clone()
         x_elevation = x[:,-1].clone().unsqueeze(1)
@@ -177,6 +191,7 @@ class Net(nn.Module):
         x_elevation = self.layer_elevation(x_elevation)
 
         x = torch.cat((x_vvh, x_freq, x_elevation), dim=1)
+        '''
 
         x = self.inter_model(x)
 

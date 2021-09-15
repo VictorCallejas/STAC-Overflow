@@ -90,12 +90,12 @@ class IterChip(Dataset):
                 grid = Grid.from_raster(path, data_name='dem')
                 
                 # Resolve flats
-                grid.resolve_flats('dem', out_name='inflated_dem')
-                x = np.concatenate([x,np.expand_dims(grid.inflated_dem,axis=0)], axis=0)
+                #grid.resolve_flats('dem', out_name='inflated_dem')
+                #x = np.concatenate([x,np.expand_dims(grid.inflated_dem,axis=0)], axis=0)
 
                 # Flow direction on hot encoded
                 dirmap = (1, 2, 3, 4, 5, 6, 7, 8)
-                grid.flowdir(data='inflated_dem', out_name='dir', dirmap=dirmap)
+                grid.flowdir(data='dem', out_name='dir', dirmap=dirmap)
                 one_hot = np.transpose(np.eye(9)[grid.dir],(2,0,1))
                 x = np.concatenate([x,one_hot], axis=0)
                 

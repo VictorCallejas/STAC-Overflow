@@ -54,8 +54,9 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     #criterion = LovaszLoss(mode='binary', ignore_index=255)
     #criterion = SoftBCEWithLogitsLoss(ignore_index=255)
-    criterion = BCE1_DICE
+    #criterion = BCE1_DICE
     #criterion = FocalLoss(ignore_index=255)
+    criterion = DiceLoss('binary', log_loss=True, from_logits=True, smooth=0.05, ignore_index=Y_NAN_VALUE, eps=1e-07)
 
     fp16 = cfg.fp16
     scaler = torch.cuda.amp.GradScaler()
@@ -69,7 +70,7 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     swa_model = torch.optim.swa_utils.AveragedModel(model)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[80, 160], gamma=1.0)
     swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="linear", anneal_epochs=cfg.swa_epochs, swa_lr=cfg.swa_lr)
 
     for epoch in tqdm(range(0, cfg.epochs + cfg.swa_epochs), total = cfg.epochs + cfg.swa_epochs,desc='EPOCH',leave=False):
@@ -86,7 +87,7 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
         for param_group in optimizer.param_groups:
             run["lr"].log(param_group['lr'])
 
-        if epoch >= cfg.epochs:
+        if (epoch >= cfg.epochs) or (t_jac > 0.97):
             swa_model.update_parameters(model)
             swa_scheduler.step()
 

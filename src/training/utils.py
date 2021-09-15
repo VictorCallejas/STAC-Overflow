@@ -98,10 +98,12 @@ def save_ckpt(model, optimizer, dataloader, cfg, path):
             'optimizer':optimizer.state_dict(),
             'data':{
                 'channels':dataloader.dataset.channels,
+                
                 'norm':{
-                    'mean':dataloader.dataset.t_mean,
-                    'std':dataloader.dataset.t_std
+                    'mean':0,#dataloader.dataset.t_mean,
+                    'std':1,#dataloader.dataset.t_std
                 }
+                
             }
         },
         path

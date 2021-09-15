@@ -7,7 +7,7 @@ fast_run = False
 data_path = '../data/raw/'
 
 #channels = ['vv','vh','abs', 'mask', 'change', 'extent','seasonality','occurrence','recurrence','transitions','nasadem']
-channels = ['vv','vh', 'change', 'extent','seasonality','occurrence','recurrence','transitions','nasadem']
+channels = ['vv','vh']
 
 val_size = 0.33
 
@@ -32,7 +32,7 @@ lr = 5e-1
 swa_lr = 5e-2
 steps_to_accumulate = 1
 
-epochs = 500
+epochs = 800
 swa_epochs = 7
 
 train_watershed = False#
