@@ -24,6 +24,6 @@ def jaccard_coeff(preds, true):
 
 def BCE1_DICE(preds, true):
     #f(x) = BCE + 1 — DICE
-    bce = SoftBCEWithLogitsLoss(ignore_index = Y_NAN_VALUE,smooth_factor = 0.05)
-    dice = DiceLoss('binary', log_loss=True, from_logits=True, smooth=0.05, ignore_index=Y_NAN_VALUE, eps=1e-07)
-    return 0.5 * bce(preds,true) + 0.5 * dice(preds,true)
+    bce = SoftBCEWithLogitsLoss(ignore_index = Y_NAN_VALUE,smooth_factor = 0.01)
+    dice = DiceLoss('binary', log_loss=True, from_logits=True, smooth=0.01, ignore_index=Y_NAN_VALUE, eps=1e-07)
+    return 0.1 * bce(preds,true) + 0.9 * dice(preds,true)

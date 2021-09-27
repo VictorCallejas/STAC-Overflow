@@ -14,7 +14,9 @@ def get_dataloaders(cfg):
     if cfg.fast_run:
         train, val = train_test_split(metadata.chip_id[:40], test_size=cfg.val_size, random_state=cfg.SEED)
     else:
-        train, val = train_test_split(metadata.chip_id, test_size=cfg.val_size, random_state=cfg.SEED)
+        train = metadata.chip_id
+        val = metadata.chip_id[:3]
+        #train, val = train_test_split(metadata.chip_id, test_size=cfg.val_size, random_state=cfg.SEED)
 
     train_dataset = IterChip(train, cfg, True)
     val_dataset = IterChip(val, cfg, False)

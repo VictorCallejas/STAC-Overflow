@@ -28,21 +28,20 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
             drop_rate=0., attn_drop_rate=0., drop_path_rate=0.0,
             norm_layer=nn.LayerNorm, ape=True, patch_norm=True,
             use_checkpoint=False, final_upsample="expand_first")
-    
+    '''
     model = getattr(smp,cfg.model_name)(
-        encoder_name=cfg.encoder_name,       
-        encoder_weights="imagenet", 
-        encoder_depth=3,
-        decoder_channels=(64, 32, 16),
+        encoder_name=cfg.encoder_name,        
+        encoder_depth=5,
+        #decoder_channels=(64, 32, 16),
         activation=None,
         decoder_attention_type=None,
         decoder_use_batchnorm=True,
         in_channels=len(cfg.channels),                  
         classes=1,
     )
-    '''
     
-    model = Net(cfg)
+    
+    #model = Net(cfg)
     #model = JA()
     print(model)
     model = model.to(device)
@@ -52,11 +51,15 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
                 lr = cfg.lr
             )
 
+    checkpoint = torch.load('../artifacts/2021_09_25_06_16_08/model.pt')
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+
     #criterion = LovaszLoss(mode='binary', ignore_index=255)
     #criterion = SoftBCEWithLogitsLoss(ignore_index=255)
-    #criterion = BCE1_DICE
+    criterion = BCE1_DICE
     #criterion = FocalLoss(ignore_index=255)
-    criterion = DiceLoss('binary', log_loss=True, from_logits=True, smooth=0.05, ignore_index=Y_NAN_VALUE, eps=1e-07)
+    #criterion = DiceLoss('binary', log_loss=True, from_logits=True, smooth=0.05, ignore_index=Y_NAN_VALUE, eps=1e-07)
 
     fp16 = cfg.fp16
     scaler = torch.cuda.amp.GradScaler()
@@ -72,38 +75,43 @@ def train(train_dataloader, val_dataloader, run, cfg, trial = None):
 
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[80, 160], gamma=1.0)
     swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, anneal_strategy="linear", anneal_epochs=cfg.swa_epochs, swa_lr=cfg.swa_lr)
-
+    s_swa = False
     for epoch in tqdm(range(0, cfg.epochs + cfg.swa_epochs), total = cfg.epochs + cfg.swa_epochs,desc='EPOCH',leave=False):
         t_loss, t_jac = train_epoch(model, train_dataloader, optimizer, device, criterion, run, scaler, steps_to_accumulate, fp16)
         run["train/loss"].log(t_loss)
         run["train/jaccard"].log(t_jac)
 
-        v_loss, v_jac = valid_epoch(model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
-        run["dev/loss"].log(v_loss)
-        run["dev/jaccard"].log(v_jac)
+        #v_loss, v_jac = valid_epoch(model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed)
+        #run["dev/loss"].log(v_loss)
+        #run["dev/jaccard"].log(v_jac)
 
-        print('TRAIN: ',t_loss, t_jac, 'VAL: ',v_loss, v_jac)
+        print('TRAIN: ',t_loss, t_jac)#, 'VAL: ',v_loss, v_jac)
 
         for param_group in optimizer.param_groups:
             run["lr"].log(param_group['lr'])
 
-        if (epoch >= cfg.epochs) or (t_jac > 0.97):
+        save_ckpt(model, optimizer, train_dataloader, cfg, path)
+
+        if t_jac > 0.98:
+            s_swa = True
+
+        if s_swa:
             swa_model.update_parameters(model)
             swa_scheduler.step()
 
             torch.optim.swa_utils.update_bn(train_dataloader, swa_model, device=device)
-            v_loss, v_jac = valid_epoch(swa_model, train_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed,swa='swa/')
+            t_loss, t_jac = valid_epoch(swa_model, train_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed,swa='swa/')
             run["swa/train/loss"].log(t_loss)
             run["swa/train/jaccard"].log(t_jac)
 
             #torch.optim.swa_utils.update_bn(val_dataloader, swa_model, device=device)
-            v_loss, v_jac = valid_epoch(swa_model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed,swa='swa/')
-            run["swa/dev/loss"].log(v_loss)
-            run["swa/dev/jaccard"].log(v_jac)
+            #v_loss, v_jac = valid_epoch(swa_model, val_dataloader, device, criterion, run, scaler, fp16, val_plot, val_watershed,swa='swa/')
+            #run["swa/dev/loss"].log(v_loss)
+            #run["swa/dev/jaccard"].log(v_jac)
 
-            print('SWA TRAIN: ',t_loss, t_jac, 'SWA VAL: ',v_loss, v_jac)
+            print('SWA TRAIN: ',t_loss, t_jac)#, 'SWA VAL: ',v_loss, v_jac)
 
-            save_ckpt(swa_model, optimizer, train_dataloader, cfg, path)
+            save_ckpt(swa_model, optimizer, train_dataloader, cfg, path + '.swa')
         else:
             scheduler.step()
 
